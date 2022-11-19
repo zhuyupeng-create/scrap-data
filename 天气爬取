@@ -1,0 +1,49 @@
+import io
+import sys
+import requests
+from bs4 import BeautifulSoup
+import numpy as np
+import pandas as pd
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='gb18030')  # 改变标准输出的默认编码, 防止控制台打印乱码
+
+url = "http://www.tianqihoubao.com/lishi/hefei/month/201812.html"
+proxies = {'http': 'http://223.240.208.210:8010'}
+headers = {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36'
+        }
+
+def get_soup(url):
+    try:
+        r = requests.get(url, timeout=30)
+        r.raise_for_status()  # 若请求不成功,抛出HTTPError 异常
+        # r.encoding = 'gbk'
+        soup = BeautifulSoup(r.text, 'lxml')
+        return soup
+    except HTTPError:
+        return "Request Error"
+
+
+def saveTocsv(data, fileName):
+    result_weather = pd.DataFrame(data, columns=['date', 'tq', 'temp', 'wind'])
+    result_weather.to_csv(fileName, index=False, encoding='gbk')
+    print('Save all weather success!')
+#将天气数据保存至csv文件
+
+def get_data():
+    soup = get_soup(url)
+    all_weather = soup.find('div', class_="wdetail").find('table').find_all("tr")
+    data = list()
+    for tr in all_weather[1:]:
+        td_li = tr.find_all("td")
+        for td in td_li:
+            s = td.get_text()
+            data.append("".join(s.split()))
+
+    res = np.array(data).reshape(-1, 4)
+    return res
+
+
+if __name__ == '__main__':
+    data = get_data()
+    saveTocsv(data, "12.csv")
